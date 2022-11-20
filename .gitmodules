@@ -1,0 +1,3 @@
+[submodule "simulink_models/Autonomous-Drive"]
+	path = simulink_models/Autonomous-Drive
+	url = git@github.com:Marksman007577/Autonomous-Drive.git
