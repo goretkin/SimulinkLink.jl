@@ -17,5 +17,6 @@ toc()
 
 % filename must be char: https://github.com/fangq/jsonlab/issues/84
 rootname = '';
+tic()
 savejson(rootname, obj, 'test.json')
-
+toc()
