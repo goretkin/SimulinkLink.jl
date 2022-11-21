@@ -1,3 +1,6 @@
 [submodule "simulink_models/Autonomous-Drive"]
 	path = simulink_models/Autonomous-Drive
 	url = git@github.com:Marksman007577/Autonomous-Drive.git
+[submodule "deps_matlab/jsonlab"]
+	path = deps_matlab/jsonlab
+	url = git@github.com:fangq/jsonlab.git
