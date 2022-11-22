@@ -46,6 +46,7 @@
     var ZOOM_STEP = 1.4;
     var VIEWPORT_SCALE = 0.9;
     var VIEWPORT_MARGIN_X = 20;
+    var VIEWPORT_MARGIN_Y = 20;
 
     var formatText = function (fig, text, availableWidth) {
         if (availableWidth < 3 * fig.charWidthM) {
@@ -87,13 +88,10 @@
         return true;
     };
 
-    ProfileSVG.moveAndZoom = function (targetFocusX, targetScaleX, fig, deltaT) {
+    ProfileSVG.moveAndZoom = function (targetFocusX, targetFocusY, targetScaleX, targetScaleY, fig, deltaT) {
         if (typeof deltaT === 'undefined') {
             deltaT = DEFAULT_TRANSITION_TIME;
         }
-
-        var targetFocusY = fig.cy;
-        var targetScaleY = 1;
 
         // TODO: dynamically update the transformation while dragging
         var mat = fig.viewport.node.transform.baseVal.consolidate().matrix;
@@ -194,8 +192,10 @@
 
     ProfileSVG.reset = function (fig) {
         var w = fig.width - VIEWPORT_MARGIN_X;
+        var h = fig.height - VIEWPORT_MARGIN_Y;
         var targetScaleX = fig.width / w * VIEWPORT_SCALE;
-        ProfileSVG.moveAndZoom(fig.cx, targetScaleX, fig);
+        var targetScaleY = fig.height / h * VIEWPORT_SCALE;
+        ProfileSVG.moveAndZoom(fig.cx, fig.cy, targetScaleX, targetScaleY, fig);
     };
 
     ProfileSVG.initialize = function (figId) {
@@ -278,8 +278,10 @@
         var rectDblClickHandler = function (e) {
             var bbox = e.target.getBBox();
             var cx = bbox.x + bbox.width / 2;
+            var cy = bbox.y + bbox.height / 2;
             var targetScaleX = fig.width / bbox.width * VIEWPORT_SCALE;
-            ProfileSVG.moveAndZoom(cx, targetScaleX, fig);
+            var targetScaleY = fig.height/ bbox.height * VIEWPORT_SCALE;
+            ProfileSVG.moveAndZoom(cx, cy, targetScaleX, targetScaleY, fig);
         };
 
         var rectMouseOverHandler = function (e) {
@@ -344,14 +346,17 @@
 
             var clientRect = svg.node.getBoundingClientRect();
             var mx = e.clientX - clientRect.left;
-            //var my = e.clientY - clientRect.top;
+            var my = e.clientY - clientRect.top;
             var ctm = svg.node.getCTM();
             var x = ctm ? (mx - ctm.e) / ctm.a : mx;
-            //var y = ctm ? (my - ctm.f) / ctm.d : my;
+            var y = ctm ? (my - ctm.f) / ctm.d : my;
             var px = (x - fig.cx) / fig.scaleX + fig.focusX;
+            var py = (y - fig.cy) / fig.scaleY + fig.focusY;
             var targetScaleX = Math.max(fig.scaleX * scale, 0.01);
+            var targetScaleY = Math.max(fig.scaleY * scale, 0.01);
             var targetFocusX = fig.scaleX / targetScaleX * (fig.focusX - px) + px;
-            ProfileSVG.moveAndZoom(targetFocusX, targetScaleX, fig, 400);
+            var targetFocusY = fig.scaleY / targetScaleY * (fig.focusY - py) + py;
+            ProfileSVG.moveAndZoom(targetFocusX, targetFocusY, targetScaleX, targetScaleY, fig, 400);
         });
 
         svg.node.addEventListener('wheel', mouseWheelHandler, supportsPassive ? {
