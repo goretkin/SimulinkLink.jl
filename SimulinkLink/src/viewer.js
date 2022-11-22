@@ -356,10 +356,11 @@
             ProfileSVG.moveAndZoom(targetFocusX, targetFocusY, targetScaleX, targetScaleY, fig, 400);
         });
 
+        if (false) {
         svg.node.addEventListener('wheel', mouseWheelHandler, supportsPassive ? {
             passive: false
         } : false);
-
+        }
         fig.viewport.drag();
     };
 
