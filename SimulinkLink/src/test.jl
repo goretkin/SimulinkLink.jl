@@ -29,8 +29,6 @@ n2 = tree.children["ACC"].children |> length
 nodes = collect(values(tree.children["ACC"].children))
 child_objects = [only(n.o) for n in nodes if length(n.o) == 1]
 
-
-
 using Gadfly, DataFrames
 
 geometries = SimulinkLink.parse_Position.(get_param.(child_objects, "Position"))
@@ -44,3 +42,6 @@ D = DataFrame(
 
 p1 = plot(D, xmin=:x1, ymin=:y1, xmax=:x2, ymax=:y2, color=[colorant"green"],
     alpha=fill(0.7, DataFrames.nrow(D)), Geom.rect)
+
+collection = SimulinkLink.SllObjs(child_objects)
+SimulinkLink.save_svg("test.svg", collection)

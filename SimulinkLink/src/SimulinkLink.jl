@@ -6,7 +6,7 @@ struct SllObj
     _::Any
 end
 
-struct SllNodes{T}
+struct SllObjs{T}
     _::T
 end
 
@@ -116,6 +116,13 @@ include("render.jl")
 # The origin is the upper-left corner of the Simulink Editor canvas before any canvas resizing. Supported coordinates are between -1073740824 and 1073740823, inclusive. Positive values are to the right of and down from the origin. Negative values are to the left of and up from the origin.
 
 parse_Position(v) = (;left=v[1], top=v[2], right=v[3], bottom=v[4])
+
+function parse_Position2(v)
+    p = parse_Position(v)
+    p1 = (p.left, p.top)
+    p2 = (p.right, p.bottom)
+    return (;p1, p2)
+end
 
 function get_bbox(child_objects)
     _Positions = get_param.(child_objects, "Position")

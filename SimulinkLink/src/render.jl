@@ -1,12 +1,12 @@
 using Colors, UUIDs
 include("svgwriter.jl")
 
-Base.showable(::MIME"image/svg+xml", ::SllNodes) = true
+Base.showable(::MIME"image/svg+xml", ::SllObjs) = true
 
 # If html embedding does not work, redefine the following method to return `false`.
-Base.showable(::MIME"text/html", ::SllNodes) = true
+Base.showable(::MIME"text/html", ::SllObjs) = true
 
-function Base.show(io::IO, mime::Union{MIME"image/svg+xml", MIME"text/html"}, nodes::SllNodes)
+function Base.show(io::IO, mime::Union{MIME"image/svg+xml", MIME"text/html"}, objs::SllObjs)
     if mime isa MIME"text/html"
         print(io, """
             <!DOCTYPE html>
@@ -17,7 +17,7 @@ function Base.show(io::IO, mime::Union{MIME"image/svg+xml", MIME"text/html"}, no
         write_svgdeclaration(io)
     end
 
-    show_body(io, nodes)
+    show_body(io, objs)
 
     if mime isa MIME"text/html"
         print(io, """
@@ -27,46 +27,28 @@ function Base.show(io::IO, mime::Union{MIME"image/svg+xml", MIME"text/html"}, no
     end
 end
 
-function show_body(io::IO, nodes::SllNodes)
-    ncols, nrows = (1, 1)
-    if nrows > fg.maxdepth
-        @warn """The depth of this graph is $nrows, exceeding the `maxdepth` (=$(fg.maxdepth)).
-                 The deeper frames will be truncated."""
-        nrows = fg.maxdepth
-    end
-    width = fg.width
+function show_body(io::IO, objs::SllObjs)
+    fg = (;
+        fontsize = 12,
+        roundradius = 2,
+        bgcolor=:fcolor,
+        fontcolor=:fcolor,
+        frameopacity=1,
+        font="inherit",
+        notext=false,
+        timeunit=:none,
+        delay=0.0,
+    )
+
+    (;mins, maxs) = get_bbox(objs._)
+    dims = maxs .- mins
+    width = dims[1]
     leftmargin = rightmargin = round(Int, width * 0.01)
     topmargin = botmargin = round(Int, max(width * 0.04, fg.fontsize * 3))
 
-    idealwidth = width - (leftmargin + rightmargin)
-    xstep = Float64(rationalize(idealwidth / ncols, tol = 1 / ncols))
-    ystep = round(Int, fg.fontsize * 1.25)
+    height = dims[2]
 
-    height = fg.height > 0.0 ? fg.height : ystep * nrows + botmargin * 2.0
-
-    function flamerects(io::IO, g#=::FlameGraph=#, j::Int, nextidx::Vector{Int})
-        j > fg.maxdepth && return
-        nextidx[end] > fg.maxframes && return
-        nextidx[end] += 1
-
-        ndata = g.data
-        color = fg.fcolor(nextidx, j, ndata)::Color
-        bw = fg.fontcolor === :bw
-        x = (first(ndata.span)-1) * xstep + leftmargin
-        if fg.yflip
-            y = topmargin + (j - 1) * ystep
-        else
-            y = height - j * ystep - botmargin
-        end
-        w = length(ndata.span) * xstep
-        r = fg.roundradius
-        shortinfo, dirinfo = extract_frameinfo(ndata.sf)
-        write_svgflamerect(io, x, y, w, ystep, r, shortinfo, dirinfo, color, bw)
-
-        for c in g
-            flamerects(io, c, j + 1, nextidx)
-        end
-    end
+    xstep = 1.0 # ??? used in viewer.js
 
     fig_id = string("fig-", replace(string(uuid4()), "-" => ""))
 
@@ -74,27 +56,59 @@ function show_body(io::IO, nodes::SllNodes)
                     bgcolor(fg), fontcolor(fg), fg.frameopacity,
                     fg.font, fg.fontsize, fg.notext, xstep, fg.timeunit, fg.delay)
 
-    nextidx = fill(1, nrows + 1) # nextidx[end]: framecount
-    flamerects(io, fg.g, 1, nextidx)
 
-    if nextidx[end] > fg.maxframes
-        @warn """The maximum number of frames (`maxframes`=$(fg.maxframes)) is reached.
-                 Some frames were truncated."""
+    for obj in objs._
+        (;p1, p2) = parse_Position2(get_param(obj, "Position"))
+        dim = p2 .- p1
+
+        (x, y) = p1
+        (w, h) = dim
+
+        yt = simplify(y + height * 0.75)
+
+        shortinfo = "blah"
+        dirinfo = "dirblah"
+        color = colorant"green"
+        r = fg.roundradius
+        bw = fg.fontcolor === :bw
+
+        sinfo = escape_html(shortinfo)
+        dinfo = escape_html(dirinfo)
+        classw = (bw & isdarkcolor(color)) ? " class=\"w\"" : ""
+        if r > zero(r)
+            print(io, """<rect x="$x" y="$y" width="$w" height="$h" rx="$r" """)
+        else
+            print(io, """<path d="M$x,$(y)v$(h)h$(w)v-$(h)z" """)
+        end
+        println(io, """fill="#$(hex(color))" data-dinfo="$dinfo"/>""")
+        println(io, """<text x="$x" dx="4" y="$yt"$classw>$sinfo</text>""")
     end
 
     write_svgfooter(io, fig_id)
 end
 
 function bgcolor(fg)
-    fg.bgcolor === :fcolor && return "#" * hex(fg.fcolor(:bg))
+    fg.bgcolor === :fcolor && return "#" * hex(colorant"white")
     fg.bgcolor === :transparent && return "transparent"
     fg.bgcolor === :classic && return ""
     return "white"
 end
 
 function fontcolor(fg)
-    fg.fontcolor === :fcolor && return "#" * hex(fg.fcolor(:font))
+    fg.fontcolor === :fcolor && return "#" * hex(colorant"black")
     fg.fontcolor === :currentcolor && return "currentcolor"
     fg.fontcolor === :bw && return ""
     return "black"
+end
+
+
+function save_svg(io::IO, g::SllObjs)
+    show(io, MIME"image/svg+xml"(), g)
+end
+
+function save_svg(filename::AbstractString, g::SllObjs)
+    open(filename, "w") do file
+        save_svg(file, g)
+    end
+    return nothing
 end
