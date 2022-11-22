@@ -291,11 +291,8 @@
             text.style.strokeWidth = '1';
             var sinfo = rect.getAttribute('data-shortinfo');
             var dir = rect.getAttribute('data-dinfo');
-            var i = sinfo.indexOf(' in ');
-            var func = sinfo.slice(0, i + 4);
-            var file = sinfo.slice(i + 4);
             var time = details.nextElementSibling;
-            details.textContent = 'Function: ' + func + dir + file;
+            details.textContent = sinfo;
             details.style.display = 'inherit';
             if (fig.delay) {
                 var count = Math.round(rect.width.baseVal.value / fig.xstep);

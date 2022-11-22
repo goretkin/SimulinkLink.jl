@@ -66,7 +66,7 @@ function show_body(io::IO, objs::SllObjs)
 
         yt = simplify(y + height * 0.75)
 
-        shortinfo = "blah"
+        shortinfo = obj._["getfullname"]
         dirinfo = "dirblah"
         color = colorant"green"
         r = fg.roundradius
