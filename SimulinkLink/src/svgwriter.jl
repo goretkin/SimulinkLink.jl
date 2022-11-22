@@ -50,9 +50,12 @@ function write_svgheader(io::IO, fig_id, width, height,
     text_stroke_opacity = notext ? 0.0 : 0.35
     op = simplify(frameopacity)
     hover_opacity = simplify(op > 0.75 ? op - 0.25 : op + 0.25)
+
+    # https://stackoverflow.com/questions/14553392/perplexed-by-svg-viewbox-width-height-etc
+    viewport = (;w, h)
     print(io,
         """
-        <svg version="1.1" width="$w" height="$h" viewBox="0 0 $w $h"
+        <svg version="1.1" width="$(viewport.w)" height="$(viewport.h)" viewBox="0 0 $w $h"
              xmlns="http://www.w3.org/2000/svg" id="$fig_id">
         <defs>
         """)

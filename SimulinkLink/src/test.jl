@@ -1,12 +1,12 @@
+using SimulinkLink
+import SimulinkLink: SllNodes, SllObj
+
+
 using JSON
 f = open("test.json")
 j = JSON.Parser.parse(f)
 j1 = only(j)
 
-
-struct SllObj
-    _::Any
-end
 
 get_param(o::SllObj, param::AbstractString) = o._["get_param"][param]
 
@@ -83,6 +83,16 @@ for (name, o) in name_pairs
     add_path!(tree, split(name, sl_path_sep), o)
 end
 
+function range_o_length(tree::SllNode)
+    n1 = length(tree.o)
+    r1 = n1:n1
+    r2s = range_o_length.(values(tree.children))
+    return reduce(union, [r1, r2s...])
+end
+
+# for a well-formed tree, it's 1:1
+@show range_o_length(tree)
+
 simulink_object_types = unique(j1i["get_param"]["Type"] for j1i in j1)
 @show simulink_object_types
 
@@ -105,7 +115,6 @@ n2 = tree.children["ACC"].children |> length
 
 nodes = collect(values(tree.children["ACC"].children))
 child_objects = [only(n.o) for n in nodes if length(n.o) == 1]
-_Positions = get_param.(child_objects, "Position")
 
 # https://www.mathworks.com/help/simulink/slref/common-block-parameters.html
 # Position: vector of coordinates, in pixels: [left top right bottom]
@@ -113,21 +122,28 @@ _Positions = get_param.(child_objects, "Position")
 
 parse_Position(v) = (;left=v[1], top=v[2], right=v[3], bottom=v[4])
 
-geometries = parse_Position.(_Positions)
-geometries = [(;p..., width=p.right-p.left, height=p.bottom-p.top) for p in geometries]
+function get_bbox(child_objects)
+    _Positions = get_param.(child_objects, "Position")
 
-bbox = (
-    (
-        minimum(getfield.(geometries, :left)),
-        minimum(getfield.(geometries, :top)),
-    ),
-    (
-        maximum(getfield.(geometries, :right)),
-        maximum(getfield.(geometries, :bottom)),
-    ),
-)
+    geometries = parse_Position.(_Positions)
+    geometries = [(;p..., width=p.right-p.left, height=p.bottom-p.top) for p in geometries]
+
+    bbox = (
+        mins = (
+            minimum(getfield.(geometries, :left)),
+            minimum(getfield.(geometries, :top)),
+        ),
+        maxs = (
+            maximum(getfield.(geometries, :right)),
+            maximum(getfield.(geometries, :bottom)),
+        ),
+    )
+    return bbox
+end
 
 using Gadfly, DataFrames
+
+geometries = parse_Position.(get_param.(child_objects, "Position"))
 
 D = DataFrame(
     x1 = getfield.(geometries, :left),
@@ -139,32 +155,4 @@ D = DataFrame(
 p1 = plot(D, xmin=:x1, ymin=:y1, xmax=:x2, ymax=:y2, color=[colorant"green"],
     alpha=fill(0.7, DataFrames.nrow(D)), Geom.rect)
 
-# using Compose
 
-
-# bbox_wh = (bbox[1], bbox[2] .- bbox[1])
-# bbox_wh4 = (bbox_wh[1]..., bbox_wh[2]...)
-
-# #c0 = UnitBox(bbox_wh4...);
-# c0 = context(bbox_wh4...)
-
-# # c = compose(c0,
-# #     [(context(), rect, fill("tomato")) for rect in _Position.(_Positions)]...
-# # )
-
-# ps = parse_Position.(_Positions)
-# ps2 = [(;p..., width=p.right-p.left, height=p.bottom-p.top) for p in ps]
-
-# rectangles = rectangle(
-#     getfield.(ps2, :left),
-#     getfield.(ps2, :top),
-#     getfield.(ps2, :width),
-#     getfield.(ps2, :height),
-# )
-
-# c = compose(c0,
-#     (context(), rectangles, fill("blue"))
-#  )
-
-
-# c |> SVG("test.svg")
