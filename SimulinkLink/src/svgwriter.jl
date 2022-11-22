@@ -129,26 +129,6 @@ function write_svgheader(io::IO, fig_id, width, height,
         """)
 end
 
-function write_svgflamerect(io::IO, xstart, ystart, width, height, roundradius,
-                            shortinfo, dirinfo, color, bw)
-    x = simplify(xstart)
-    y = simplify(ystart)
-    yt = simplify(y + height * 0.75)
-    w = simplify(simplify(width + xstart) - x)
-    h = simplify(simplify(height + ystart) - y)
-    r = simplify(roundradius)
-    sinfo = escape_html(shortinfo)
-    dinfo = escape_html(dirinfo)
-    classw = (bw & isdarkcolor(color)) ? " class=\"w\"" : ""
-    if r > zero(r)
-        print(io, """<rect x="$x" y="$y" width="$w" height="$h" rx="$r" """)
-    else
-        print(io, """<path d="M$x,$(y)v$(h)h$(w)v-$(h)z" """)
-    end
-    println(io, """fill="#$(hex(color))" data-dinfo="$dinfo"/>""")
-    println(io, """<text x="$x" dx="4" y="$yt"$classw>$sinfo</text>""")
-end
-
 function write_svgfooter(io::IO, fig_id)
     println(io, "</g></g>")
     println(io, "<script><![CDATA[")
